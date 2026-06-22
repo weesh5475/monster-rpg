@@ -36,6 +36,8 @@ export default class BattleScene extends Phaser.Scene {
       this.wildMon = data.wild;
     }
     this.playerMon = getActiveMonster(); // 파티의 실제 인스턴스
+    this.resetBattleState(this.playerMon); // 랭크/상태이상은 배틀 한정 → 초기화
+    this.resetBattleState(this.wildMon);
     this.mode = 'busy'; // 'busy' | 'message' | 'menu'
     this._resolveMessage = null;
     this.partyForced = false; // 기절 후 강제 교체 모드인지
@@ -479,6 +481,7 @@ export default class BattleScene extends Phaser.Scene {
       await this.showMessage(`돌아와, ${oldMon.name}!`);
     }
     this.playerMon = newMon;
+    this.resetBattleState(newMon); // 새로 나온 몬스터는 랭크/상태이상 초기화
     this.playerSprite.setFillStyle(newMon.color);
     this.applyInfo(this.playerUI, newMon);
     await this.showMessage(`가라, ${newMon.name}!`);
@@ -587,9 +590,38 @@ export default class BattleScene extends Phaser.Scene {
   decideOrder(playerMove, wildMove) {
     const p = { atk: this.playerMon, def: this.wildMon, move: playerMove, side: 'player' };
     const w = { atk: this.wildMon, def: this.playerMon, move: wildMove, side: 'wild' };
-    if (this.playerMon.speed > this.wildMon.speed) return [p, w];
-    if (this.playerMon.speed < this.wildMon.speed) return [w, p];
+    const ps = this.effSpeed(this.playerMon);
+    const ws = this.effSpeed(this.wildMon);
+    if (ps > ws) return [p, w];
+    if (ps < ws) return [w, p];
     return Math.random() < 0.5 ? [p, w] : [w, p];
+  }
+
+  // ── 배틀 한정 상태(랭크/상태이상) ──
+  resetBattleState(mon) {
+    if (!mon) return;
+    mon._stages = { atk: 0, def: 0, spAtk: 0, spDef: 0, speed: 0 };
+    mon._status = null; // 'par' 등
+  }
+
+  // 마비면 스피드 절반
+  effSpeed(mon) {
+    const s = mon.speed;
+    return mon._status === 'par' ? Math.floor(s / 2) : s;
+  }
+
+  // 배틀 메시지용 호칭(내 몬스터 vs 상대)
+  monLabel(mon) {
+    return mon === this.playerMon ? mon.name : this.opponentLabel();
+  }
+
+  // 랭크 단계 변경(±6 상한). 실제 변화량 반환(0이면 더 못 바뀜).
+  changeStage(mon, stat, delta) {
+    if (!mon._stages) this.resetBattleState(mon);
+    const before = mon._stages[stat] || 0;
+    const after = Math.max(-6, Math.min(6, before + delta));
+    mon._stages[stat] = after;
+    return after - before;
   }
 
   isBattleOver() {
@@ -617,10 +649,22 @@ export default class BattleScene extends Phaser.Scene {
   async performAction(action) {
     const { atk, def, move, side } = action;
     if (atk.hp <= 0) return;
+    const userLabel = this.monLabel(atk);
+
+    // 마비: 25% 확률로 행동 불가(턴 소비, PP 소비 X)
+    if (atk._status === 'par' && Math.random() < 0.25) {
+      await this.showMessage(`${userLabel}는 몸이 저려서 움직일 수 없다!`);
+      return;
+    }
 
     if (move.pp > 0) move.pp -= 1;
-    const userLabel = side === 'player' ? atk.name : this.opponentLabel();
     await this.showMessage(`${userLabel}의 ${move.name}!`);
+
+    // 데미지 없는 효과기(변화기 또는 위력 0): 상태이상/랭크변화
+    if (move.category === '변화' || move.power === 0) {
+      await this.applyEffectMove(action);
+      return;
+    }
 
     const result = calculateDamage(atk, def, move);
     if (!result.hit) {
@@ -639,6 +683,47 @@ export default class BattleScene extends Phaser.Scene {
     if (eff) await this.showMessage(eff);
   }
 
+  // 효과기(데미지 없음) 적용: 명중 굴림 → 상태이상/랭크변화
+  async applyEffectMove(action) {
+    const { atk, def, move } = action;
+    const eff = move.effect;
+    // 명중이 숫자면 굴리고, null('-')이면 항상 적중(보통 자신 강화)
+    if (typeof move.accuracy === 'number' && Math.random() * 100 >= move.accuracy) {
+      await this.showMessage('하지만 빗나갔다!');
+      return;
+    }
+    if (!eff) return;
+    const target = eff.target === 'self' ? atk : def;
+    const targetLabel = this.monLabel(target);
+
+    // 상태이상(마비)
+    if (eff.status === 'par') {
+      if (target.hp <= 0) return;
+      if (target._status) {
+        await this.showMessage('하지만 효과가 없었다…'); // 이미 상태이상
+        return;
+      }
+      target._status = 'par';
+      this.applyInfo(target === this.playerMon ? this.playerUI : this.wildUI, target);
+      await this.showMessage(`${targetLabel}는 마비되어 움직이기 힘들어졌다!`);
+      return;
+    }
+
+    // 랭크 변화(공격/방어)
+    if (eff.stat) {
+      const applied = this.changeStage(target, eff.stat, eff.delta);
+      const statName = eff.stat === 'atk' ? '공격' : eff.stat === 'def' ? '방어' : eff.stat;
+      if (applied === 0) {
+        const limit = eff.delta > 0 ? '더 올라가지 않는다!' : '더 내려가지 않는다!';
+        await this.showMessage(`${targetLabel}의 ${statName}은 ${limit}`);
+        return;
+      }
+      const big = Math.abs(eff.delta) >= 2 ? '크게 ' : '';
+      const dir = eff.delta > 0 ? '올라갔다' : '떨어졌다';
+      await this.showMessage(`${targetLabel}의 ${statName}이(가) ${big}${dir}!`);
+    }
+  }
+
   async checkFaintAndContinue() {
     if (this.wildMon.hp <= 0) {
       await this.showMessage(`${josa(this.opponentLabel(), '을/를')} 쓰러뜨렸다!`);
@@ -649,6 +734,7 @@ export default class BattleScene extends Phaser.Scene {
         this.trainerIndex += 1;
         if (this.trainerIndex < this.trainerTeam.length) {
           this.wildMon = this.trainerTeam[this.trainerIndex];
+          this.resetBattleState(this.wildMon); // 트레이너 다음 몬스터도 초기화
           this.refreshOpponentUI();
           await this.showMessage(
             `${josa(this.trainer.name, '은/는')} ${josa(this.wildMon.name, '을/를')} 내보냈다!`

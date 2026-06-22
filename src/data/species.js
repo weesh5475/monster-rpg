@@ -11,10 +11,14 @@ export const SPECIES = {
     name: '불꽃몬',
     types: ['불꽃'],
     baseStats: { hp: 45, atk: 55, def: 45, spAtk: 60, spDef: 50, speed: 55 },
+    // 불꽃/노말 위주. Lv5 시작이면 할퀴기·불꽃세례·노려보기 보유 →
+    //  Lv6 칼춤(자속 공격↑ 테스트), Lv7 불꽃엄니(4개→교체 흐름).
     learnset: [
-      { level: 1, moveId: '몸통박치기' },
+      { level: 1, moveId: '할퀴기' },
       { level: 1, moveId: '불꽃세례' },
-      { level: 7, moveId: '깨물기' },
+      { level: 4, moveId: '노려보기' },
+      { level: 6, moveId: '칼춤' },
+      { level: 7, moveId: '불꽃엄니' },
     ],
     color: 0xff7043, // 주황
     catchRate: 0.7, // 포획률(0~1, 클수록 잘 잡힘)
@@ -27,10 +31,13 @@ export const SPECIES = {
     name: '물몬',
     types: ['물'],
     baseStats: { hp: 50, atk: 50, def: 55, spAtk: 55, spDef: 55, speed: 40 },
+    // 물/노말 위주 + 전기자석파(마비 유틸, 테스트용). Lv5면 4개 보유 → Lv7 물의파동(교체 흐름).
     learnset: [
       { level: 1, moveId: '몸통박치기' },
       { level: 1, moveId: '물대포' },
-      { level: 4, moveId: '깨물기' },
+      { level: 3, moveId: '전기자석파' },
+      { level: 5, moveId: '단단해지기' },
+      { level: 7, moveId: '물의파동' },
     ],
     color: 0x42a5f5, // 파랑
     catchRate: 0.8,
@@ -43,14 +50,12 @@ export const SPECIES = {
     name: '풀몬',
     types: ['풀'],
     baseStats: { hp: 55, atk: 50, def: 55, spAtk: 55, spDef: 55, speed: 40 },
-    // 시작 레벨 5면 앞 4개(몸통박치기·덩굴채찍·깨물기·전기쇼크) 보유 →
-    // 레벨 7에서 물대포 습득 시 "잊을 기술 고르기" 흐름이 발생(테스트용).
+    // 풀/노말 위주. Lv5면 몸통박치기·덩굴채찍·잎날가르기 보유 → Lv7 울음소리(상대 공격↓).
     learnset: [
       { level: 1, moveId: '몸통박치기' },
       { level: 1, moveId: '덩굴채찍' },
-      { level: 3, moveId: '깨물기' },
-      { level: 5, moveId: '전기쇼크' },
-      { level: 7, moveId: '물대포' },
+      { level: 4, moveId: '잎날가르기' },
+      { level: 7, moveId: '울음소리' },
     ],
     color: 0x66bb6a, // 초록
     catchRate: 0.8,
@@ -65,9 +70,12 @@ export const SPECIES = {
     name: '돌몬',
     types: ['바위'],
     baseStats: { hp: 50, atk: 60, def: 70, spAtk: 30, spDef: 45, speed: 35 },
+    // 바위/노말 위주.
     learnset: [
       { level: 1, moveId: '몸통박치기' },
-      { level: 6, moveId: '깨물기' },
+      { level: 1, moveId: '바위던지기' },
+      { level: 6, moveId: '단단해지기' },
+      { level: 9, moveId: '막치기' },
     ],
     color: 0x9e8b6f, // 흙빛 회갈색
     catchRate: 0.7,
@@ -83,10 +91,13 @@ export const SPECIES = {
     types: ['불꽃'],
     baseStats: { hp: 65, atk: 80, def: 65, spAtk: 85, spDef: 70, speed: 80 },
     learnset: [
-      { level: 1, moveId: '몸통박치기' },
+      { level: 1, moveId: '할퀴기' },
       { level: 1, moveId: '불꽃세례' },
-      { level: 7, moveId: '깨물기' },
-      { level: 12, moveId: '전기쇼크' },
+      { level: 4, moveId: '노려보기' },
+      { level: 6, moveId: '칼춤' },
+      { level: 7, moveId: '불꽃엄니' },
+      { level: 12, moveId: '막치기' },
+      { level: 16, moveId: '깨물기' },
     ],
     color: 0xe64a19, // 진한 주황
     catchRate: 0.45,
@@ -102,8 +113,11 @@ export const SPECIES = {
     learnset: [
       { level: 1, moveId: '몸통박치기' },
       { level: 1, moveId: '물대포' },
-      { level: 7, moveId: '깨물기' },
-      { level: 12, moveId: '전기쇼크' },
+      { level: 3, moveId: '전기자석파' },
+      { level: 5, moveId: '단단해지기' },
+      { level: 7, moveId: '물의파동' },
+      { level: 12, moveId: '막치기' },
+      { level: 16, moveId: '깨물기' },
     ],
     color: 0x1976d2, // 진한 파랑
     catchRate: 0.5,
@@ -119,9 +133,10 @@ export const SPECIES = {
     learnset: [
       { level: 1, moveId: '몸통박치기' },
       { level: 1, moveId: '덩굴채찍' },
-      { level: 7, moveId: '깨물기' },
-      { level: 10, moveId: '전기쇼크' },
-      { level: 13, moveId: '물대포' },
+      { level: 4, moveId: '잎날가르기' },
+      { level: 7, moveId: '울음소리' },
+      { level: 12, moveId: '막치기' },
+      { level: 16, moveId: '깨물기' },
     ],
     color: 0x388e3c, // 진한 초록
     catchRate: 0.5,
