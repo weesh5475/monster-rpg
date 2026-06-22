@@ -36,6 +36,29 @@ function deserializeMon(s) {
   return mon;
 }
 
+// ── 자동 저장(18.5+) ──
+// 여러 곳(배틀·박스·상점 등)에서 위치 인자 없이도 저장할 수 있도록
+// 마지막으로 알려진 오버월드 위치를 기억해 둔다.
+let lastOverworldPos = null;
+
+export function setOverworldPos(player) {
+  if (player && Number.isInteger(player.x) && Number.isInteger(player.y)) {
+    lastOverworldPos = { x: player.x, y: player.y, mapId: player.mapId };
+  }
+}
+
+// 자동 저장: player 를 주면 위치를 갱신한 뒤 저장, 안 주면 마지막 위치로 저장.
+// 저장 실패(localStorage 막힘 등)는 조용히 무시한다.
+export function autoSave(player) {
+  try {
+    if (player) setOverworldPos(player);
+    if (!lastOverworldPos) return false;
+    return saveGame(lastOverworldPos);
+  } catch (e) {
+    return false;
+  }
+}
+
 // player: { x, y, mapId }
 export function saveGame(player) {
   try {

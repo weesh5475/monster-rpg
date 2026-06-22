@@ -33,7 +33,7 @@ import {
   setTileOverride,
   MAX_PARTY,
 } from '../data/playerState.js';
-import { saveGame, loadGame, hasSave, deleteSave } from '../systems/saveLoad.js';
+import { saveGame, loadGame, hasSave, deleteSave, autoSave, setOverworldPos } from '../systems/saveLoad.js';
 import { getItem, useHealItem, SHOP_LIST, sellPrice } from '../data/items.js';
 import { josa } from '../utils/josa.js';
 
@@ -165,6 +165,7 @@ export default class WorldScene extends Phaser.Scene {
     this.player.setPosition(this.tileToWorldX(x), this.tileToWorldY(y));
     this.cameras.main.setBounds(0, 0, this.mapWidth * TILE_SIZE, this.mapHeight * TILE_SIZE);
     this.updateDebugText();
+    setOverworldPos({ x, y, mapId }); // 자동 저장용 위치 추적(워프/로드 직후)
   }
 
   // 맵 원본 타일에 tileOverrides(자르기/괴력 변경분)를 적용한 복사본을 만든다.
@@ -343,10 +344,16 @@ export default class WorldScene extends Phaser.Scene {
   }
 
   afterMove() {
+    setOverworldPos({ x: this.tileX, y: this.tileY, mapId: this.mapId }); // 자동 저장용 위치 추적
     this.updateSurfState(); // 뭍에 올랐는지
     if (this.checkWarp()) return; // 워프(인카운트 스킵)
     if (this.checkItemBall()) return; // 밟아서 아이템볼 획득
     this.checkEncounter(); // 키큰풀/물 인카운트
+  }
+
+  // 상태가 바뀌는 순간 자동 저장(현재 위치 + playerState). 실패는 조용히 무시.
+  saveAuto() {
+    autoSave({ x: this.tileX, y: this.tileY, mapId: this.mapId });
   }
 
   // 물 위에 있다가 육지로 올라오면 파도타기 해제
@@ -382,6 +389,7 @@ export default class WorldScene extends Phaser.Scene {
     this.cameras.main.fadeOut(200, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => {
       this.loadMap(warp.toMap, warp.toX, warp.toY);
+      this.saveAuto(); // 맵 워프 진입 직후 자동 저장
       this.cameras.main.fadeIn(200, 0, 0, 0);
       this.isWarping = false;
     });
@@ -412,6 +420,7 @@ export default class WorldScene extends Phaser.Scene {
       this.loadMap(c.mapId, c.x, c.y);
     }
     this.cameras.main.flash(ENCOUNTER_FLASH, 255, 255, 255);
+    this.saveAuto(); // 배틀 종료 후 필드 복귀 직후 자동 저장(승리/도망/포획/패배)
   }
 
   // 필드에서 P 키로 파티 상태 간단 오버레이 토글.
@@ -581,6 +590,7 @@ export default class WorldScene extends Phaser.Scene {
     const name = getItem(ball.itemId).name;
     const msg = qty > 1 ? `${name} ${qty}개를 주웠다!` : `${josa(name, '을/를')} 주웠다!`;
     this.showNpcMessage([msg]);
+    this.saveAuto(); // 아이템볼 획득 직후
   }
 
   startDialogue(npc) {
@@ -699,6 +709,7 @@ export default class WorldScene extends Phaser.Scene {
     playerState.lastCenter = { mapId: this.mapId, x: this.tileX, y: this.tileY };
     healPartyFull();
     this.showNpcMessage(['회복 중…', '몬스터들이 모두 건강해졌어요!']);
+    this.saveAuto(); // 회복센터 회복 직후
   }
 
   healNo() {
@@ -1004,6 +1015,7 @@ export default class WorldScene extends Phaser.Scene {
     playerState.money -= total;
     playerState.items[id] = (playerState.items[id] || 0) + qty;
     this.showToast(`${item.name} ${qty}개를 샀습니다! 감사합니다.`);
+    this.saveAuto(); // 상점 구매 직후
     this.openShopBuy(); // 계속 쇼핑
   }
 
@@ -1026,6 +1038,7 @@ export default class WorldScene extends Phaser.Scene {
     if (playerState.items[id] <= 0) delete playerState.items[id];
     playerState.money += gain;
     this.showToast(`${getItem(id).name}를 팔아 ${gain}코인을 받았습니다.`);
+    this.saveAuto(); // 상점 판매 직후
     this.openShopSell();
   }
 
@@ -1586,6 +1599,7 @@ export default class WorldScene extends Phaser.Scene {
     this.boxActionItems = null;
     this.boxSummaryOpen = false;
     this.renderBox();
+    this.saveAuto(); // 박스 입출고 직후
   }
 
   boxToast(text) {

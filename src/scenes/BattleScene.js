@@ -17,6 +17,7 @@ import { getSpecies } from '../data/species.js';
 import { getItem, useHealItem } from '../data/items.js';
 import { createMonster } from '../data/monsters.js';
 import { josa } from '../utils/josa.js';
+import { autoSave } from '../systems/saveLoad.js';
 
 export default class BattleScene extends Phaser.Scene {
   constructor() {
@@ -567,6 +568,7 @@ export default class BattleScene extends Phaser.Scene {
         playerState.box.push(this.wildMon);
         await this.showMessage('파티가 가득 차서 보관함으로 보냈다.');
       }
+      autoSave(); // 포획 성공 직후
       this.endBattle({ defeated: false });
     } else {
       await this.showMessage(`앗! 몬스터볼에서 ${josa(this.wildMon.name, '이/가')} 튀어나왔다!`);
@@ -696,6 +698,7 @@ export default class BattleScene extends Phaser.Scene {
         this.playerSprite.setFillStyle(this.playerMon.color);
         this.applyInfo(this.playerUI, this.playerMon);
         await this.showMessage(`축하합니다! ${josa(ev.from, '은/는')} ${josa(ev.to, '으로/로')} 진화했다!`);
+        autoSave(); // 진화 직후
       }
     }
   }
