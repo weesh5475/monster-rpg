@@ -1,0 +1,18 @@
+{
+  "name": "monster-rpg",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "오리지널 몬스터 수집 RPG (포켓몬 스타일) - 1단계: 타일맵 격자 이동",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "phaser": "^3.80.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}
