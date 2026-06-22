@@ -1,7 +1,8 @@
 // ────────────────────────────────────────────────────────────
 // 종족(Species) DB — 전부 임시 placeholder. 나중에 내 오리지널 몬스터로 교체.
 //   { id, name, types:[1~2], baseStats:{hp,atk,def,spAtk,spDef,speed},
-//     learnset:[기술id...], color(색네모용) }
+//     learnset:[{level, moveId}...] (레벨 도달 시 습득), color(색네모용) }
+//   ※ learnset 은 레벨 오름차순. createMonster 는 "현재 레벨 이하" 중 앞 4개를 보유.
 // ────────────────────────────────────────────────────────────
 
 export const SPECIES = {
@@ -10,7 +11,11 @@ export const SPECIES = {
     name: '불꽃몬',
     types: ['불꽃'],
     baseStats: { hp: 45, atk: 55, def: 45, spAtk: 60, spDef: 50, speed: 55 },
-    learnset: ['몸통박치기', '불꽃세례', '깨물기'],
+    learnset: [
+      { level: 1, moveId: '몸통박치기' },
+      { level: 1, moveId: '불꽃세례' },
+      { level: 7, moveId: '깨물기' },
+    ],
     color: 0xff7043, // 주황
     catchRate: 0.7, // 포획률(0~1, 클수록 잘 잡힘)
     baseExp: 50, // 처치 시 경험치 계산 기준
@@ -22,7 +27,11 @@ export const SPECIES = {
     name: '물몬',
     types: ['물'],
     baseStats: { hp: 50, atk: 50, def: 55, spAtk: 55, spDef: 55, speed: 40 },
-    learnset: ['몸통박치기', '물대포'],
+    learnset: [
+      { level: 1, moveId: '몸통박치기' },
+      { level: 1, moveId: '물대포' },
+      { level: 4, moveId: '깨물기' },
+    ],
     color: 0x42a5f5, // 파랑
     catchRate: 0.8,
     baseExp: 50,
@@ -34,7 +43,15 @@ export const SPECIES = {
     name: '풀몬',
     types: ['풀'],
     baseStats: { hp: 55, atk: 50, def: 55, spAtk: 55, spDef: 55, speed: 40 },
-    learnset: ['몸통박치기', '덩굴채찍'],
+    // 시작 레벨 5면 앞 4개(몸통박치기·덩굴채찍·깨물기·전기쇼크) 보유 →
+    // 레벨 7에서 물대포 습득 시 "잊을 기술 고르기" 흐름이 발생(테스트용).
+    learnset: [
+      { level: 1, moveId: '몸통박치기' },
+      { level: 1, moveId: '덩굴채찍' },
+      { level: 3, moveId: '깨물기' },
+      { level: 5, moveId: '전기쇼크' },
+      { level: 7, moveId: '물대포' },
+    ],
     color: 0x66bb6a, // 초록
     catchRate: 0.8,
     baseExp: 50,
@@ -48,7 +65,10 @@ export const SPECIES = {
     name: '돌몬',
     types: ['바위'],
     baseStats: { hp: 50, atk: 60, def: 70, spAtk: 30, spDef: 45, speed: 35 },
-    learnset: ['몸통박치기', '깨물기'],
+    learnset: [
+      { level: 1, moveId: '몸통박치기' },
+      { level: 6, moveId: '깨물기' },
+    ],
     color: 0x9e8b6f, // 흙빛 회갈색
     catchRate: 0.7,
     baseExp: 50,
@@ -62,7 +82,12 @@ export const SPECIES = {
     name: '불꽃룡',
     types: ['불꽃'],
     baseStats: { hp: 65, atk: 80, def: 65, spAtk: 85, spDef: 70, speed: 80 },
-    learnset: ['몸통박치기', '불꽃세례', '깨물기'],
+    learnset: [
+      { level: 1, moveId: '몸통박치기' },
+      { level: 1, moveId: '불꽃세례' },
+      { level: 7, moveId: '깨물기' },
+      { level: 12, moveId: '전기쇼크' },
+    ],
     color: 0xe64a19, // 진한 주황
     catchRate: 0.45,
     baseExp: 110,
@@ -74,7 +99,12 @@ export const SPECIES = {
     name: '물룡',
     types: ['물'],
     baseStats: { hp: 75, atk: 70, def: 80, spAtk: 75, spDef: 80, speed: 55 },
-    learnset: ['몸통박치기', '물대포'],
+    learnset: [
+      { level: 1, moveId: '몸통박치기' },
+      { level: 1, moveId: '물대포' },
+      { level: 7, moveId: '깨물기' },
+      { level: 12, moveId: '전기쇼크' },
+    ],
     color: 0x1976d2, // 진한 파랑
     catchRate: 0.5,
     baseExp: 110,
@@ -86,7 +116,13 @@ export const SPECIES = {
     name: '풀룡',
     types: ['풀'],
     baseStats: { hp: 80, atk: 75, def: 80, spAtk: 80, spDef: 80, speed: 55 },
-    learnset: ['몸통박치기', '덩굴채찍'],
+    learnset: [
+      { level: 1, moveId: '몸통박치기' },
+      { level: 1, moveId: '덩굴채찍' },
+      { level: 7, moveId: '깨물기' },
+      { level: 10, moveId: '전기쇼크' },
+      { level: 13, moveId: '물대포' },
+    ],
     color: 0x388e3c, // 진한 초록
     catchRate: 0.5,
     baseExp: 110,

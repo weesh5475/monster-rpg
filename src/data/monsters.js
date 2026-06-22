@@ -18,6 +18,28 @@ export function calcMaxHp(base, level) {
   return Math.floor((base * 2 * level) / 100) + level + 10;
 }
 
+// 기술 id → 배틀용 기술 인스턴스(현재PP=최대PP). 모르는 id 면 null.
+export function instantiateMove(moveId) {
+  const m = getMove(moveId);
+  if (!m) return null;
+  return {
+    id: m.id,
+    name: m.name,
+    type: m.type,
+    category: m.category,
+    power: m.power,
+    accuracy: m.accuracy,
+    maxPp: m.pp,
+    pp: m.pp,
+  };
+}
+
+// 종족 learnset 중 "현재 레벨 이하"에 배우는 기술 id 목록(learnset 순서, 중복 제거)
+export function movesUpToLevel(species, level) {
+  const ids = species.learnset.filter((e) => e.level <= level).map((e) => e.moveId);
+  return [...new Set(ids)];
+}
+
 export function createMonster(speciesId, level) {
   const species = getSpecies(speciesId);
   if (!species) {
@@ -26,20 +48,11 @@ export function createMonster(speciesId, level) {
   const bs = species.baseStats;
   const maxHp = calcMaxHp(bs.hp, level);
 
-  // 배울 기술 중 앞 4개를 보유 기술로. 각 기술은 현재PP=최대PP 로 인스턴스화.
-  const moves = species.learnset.slice(0, 4).map((moveId) => {
-    const m = getMove(moveId);
-    return {
-      id: m.id,
-      name: m.name,
-      type: m.type,
-      category: m.category,
-      power: m.power,
-      accuracy: m.accuracy,
-      maxPp: m.pp,
-      pp: m.pp,
-    };
-  });
+  // 현재 레벨까지 배우는 기술 중 앞 4개를 보유 기술로.
+  const moves = movesUpToLevel(species, level)
+    .slice(0, 4)
+    .map((moveId) => instantiateMove(moveId))
+    .filter(Boolean);
 
   return {
     speciesId: species.id,

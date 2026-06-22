@@ -6,7 +6,7 @@
 // 전부 try/catch — 저장이 없거나 손상돼도 멈추지 않고 새 게임으로 진행.
 // ────────────────────────────────────────────────────────────
 import { playerState } from '../data/playerState.js';
-import { createMonster } from '../data/monsters.js';
+import { createMonster, instantiateMove } from '../data/monsters.js';
 
 const SAVE_KEY = 'monsterRpgSave';
 const SAVE_VERSION = 1;
@@ -27,11 +27,17 @@ function deserializeMon(s) {
   const mon = createMonster(s.speciesId, s.level); // 능력치 재계산됨
   if (typeof s.exp === 'number') mon.exp = s.exp;
   if (typeof s.hp === 'number') mon.hp = Math.max(0, Math.min(s.hp, mon.maxHp));
-  if (Array.isArray(s.moves)) {
-    s.moves.forEach((sm) => {
-      const mv = mon.moves.find((m) => m.id === sm.id);
-      if (mv && typeof sm.pp === 'number') mv.pp = Math.max(0, Math.min(sm.pp, mv.maxPp));
-    });
+  // 저장된 기술 구성을 그대로 복원(레벨업 습득/교체 결과 유지). 기본 기술 무시.
+  if (Array.isArray(s.moves) && s.moves.length > 0) {
+    const restored = s.moves
+      .map((sm) => {
+        const mv = instantiateMove(sm.id);
+        if (!mv) return null; // 알 수 없는 기술 id 는 건너뜀
+        if (typeof sm.pp === 'number') mv.pp = Math.max(0, Math.min(sm.pp, mv.maxPp));
+        return mv;
+      })
+      .filter(Boolean);
+    if (restored.length > 0) mon.moves = restored;
   }
   return mon;
 }

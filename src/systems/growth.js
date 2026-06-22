@@ -1,12 +1,17 @@
 // ────────────────────────────────────────────────────────────
-// 성장 시스템 (6단계): 경험치 → 레벨업 → 진화.
+// 성장 시스템 (6단계): 경험치 → 레벨업 → (기술 습득) → 진화.
 //   expForLevel(L) = L^3 (레벨 L 도달에 필요한 누적 경험치)
 //   gainExp(mon, amount) → 발생한 이벤트 배열 반환
-//     이벤트: {type:'exp', amount} | {type:'levelup', level} | {type:'evolve', from, to}
+//     이벤트: {type:'exp', amount} | {type:'levelup', level}
+//           | {type:'learn', moveName}                  (기술 4개 미만 → 자동 습득, 이미 적용됨)
+//           | {type:'learn-choice', moveId, moveName}   (4개 꽉 참 → 호출부가 교체 결정)
+//           | {type:'evolve', from, to}
+//   ※ 기술 습득은 해당 레벨업 직후, 진화보다 먼저 처리된다.
 // 메시지/연출은 호출부(BattleScene)가 이벤트를 보고 처리한다.
 // ────────────────────────────────────────────────────────────
 import { getSpecies } from '../data/species.js';
-import { calcStat, calcMaxHp } from '../data/monsters.js';
+import { calcStat, calcMaxHp, instantiateMove } from '../data/monsters.js';
+import { getMove } from '../data/moves.js';
 
 export function expForLevel(level) {
   return level ** 3;
@@ -47,6 +52,22 @@ export function gainExp(mon, amount) {
     mon.level += 1;
     recalcStats(mon);
     events.push({ type: 'levelup', level: mon.level });
+
+    // 이 레벨에 배우는 기술 처리(진화보다 먼저). 진화 전 종족 learnset 기준.
+    const learnSp = getSpecies(mon.speciesId);
+    const toLearn = learnSp.learnset.filter((e) => e.level === mon.level);
+    for (const entry of toLearn) {
+      if (mon.moves.some((m) => m.id === entry.moveId)) continue; // 이미 보유 → 스킵
+      const move = getMove(entry.moveId);
+      if (!move) continue;
+      if (mon.moves.length < 4) {
+        mon.moves.push(instantiateMove(entry.moveId)); // 자동 습득
+        events.push({ type: 'learn', moveName: move.name });
+      } else {
+        // 4개 꽉 참 → 교체 여부는 호출부(BattleScene)가 결정
+        events.push({ type: 'learn-choice', moveId: entry.moveId, moveName: move.name });
+      }
+    }
 
     // 레벨업으로 진화 레벨 도달 시 진화
     const sp = getSpecies(mon.speciesId);

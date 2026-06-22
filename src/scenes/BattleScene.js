@@ -15,7 +15,7 @@ import { calcCaptureChance, rollCapture } from '../systems/capture.js';
 import { expForLevel, gainExp } from '../systems/growth.js';
 import { getSpecies } from '../data/species.js';
 import { getItem, useHealItem } from '../data/items.js';
-import { createMonster } from '../data/monsters.js';
+import { createMonster, instantiateMove } from '../data/monsters.js';
 import { josa } from '../utils/josa.js';
 import { autoSave } from '../systems/saveLoad.js';
 
@@ -693,6 +693,12 @@ export default class BattleScene extends Phaser.Scene {
         await this.showMessage(
           `${josa(this.playerMon.name, '은/는')} 레벨 ${josa(String(ev.level), '이/가')} 되었다!`
         );
+      } else if (ev.type === 'learn') {
+        // 4개 미만 → 이미 자동 습득됨. 메시지만.
+        await this.showMessage(`${josa(this.playerMon.name, '은/는')} ${josa(ev.moveName, '을/를')} 배웠다!`);
+      } else if (ev.type === 'learn-choice') {
+        // 4개 꽉 참 → 잊을 기술 고르기
+        await this.resolveLearnChoice(ev.moveId, ev.moveName);
       } else if (ev.type === 'evolve') {
         await this.showMessage(`어라…? ${ev.from}의 모습이…!`);
         this.playerSprite.setFillStyle(this.playerMon.color);
@@ -701,6 +707,56 @@ export default class BattleScene extends Phaser.Scene {
         autoSave(); // 진화 직후
       }
     }
+  }
+
+  // 기술 4개일 때 새 기술 습득: 잊을 기술 고르기 흐름.
+  async resolveLearnChoice(moveId, moveName) {
+    const name = this.playerMon.name;
+    await this.showMessage(`${josa(name, '은/는')} ${josa(moveName, '을/를')} 배우고 싶어한다.`);
+    await this.showMessage(`하지만 기술이 4개다. 잊을 기술을 고를까?`);
+    const idx = await this.askForgetMove();
+    if (idx < 0) {
+      await this.showMessage(`${josa(name, '은/는')} ${josa(moveName, '을/를')} 배우기를 포기했다.`);
+      return;
+    }
+    const oldName = this.playerMon.moves[idx].name;
+    this.playerMon.moves[idx] = instantiateMove(moveId);
+    await this.showMessage(
+      `${josa(name, '은/는')} ${josa(oldName, '을/를')} 잊고 ${josa(moveName, '을/를')} 배웠다!`
+    );
+    autoSave(); // 기술 교체 직후
+  }
+
+  // 현재 보유 기술 4개 + [그만두기] 메뉴 → 고른 인덱스(0~3) 또는 -1(취소) 반환
+  askForgetMove() {
+    return new Promise((resolve) => {
+      const moves = this.playerMon.moves;
+      const done = (val) => {
+        this.closeMenu();
+        this.mode = 'busy';
+        resolve(val);
+      };
+      const items = moves.map((mv, i) => ({
+        label: `${mv.name}\nPP ${mv.pp}/${mv.maxPp}`,
+        enabled: true,
+        onSelect: () => done(i),
+      }));
+      items.push({ label: '그만두기', enabled: true, onSelect: () => done(-1) });
+      const positions = moves.map((_, i) => ({
+        x: 110 + (i % 2) * 145,
+        y: 248 + Math.floor(i / 2) * 38,
+      }));
+      positions.push({ x: 410, y: 286 }); // 그만두기
+      this.setStaticMessage('잊을 기술을 고르세요.');
+      this.openMenu(items, {
+        positions,
+        cols: 2,
+        btnW: 135,
+        btnH: 34,
+        cursor: 0,
+        onCancel: () => done(-1),
+      });
+    });
   }
 
   // 야생 격파 보상 코인
